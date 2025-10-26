@@ -1,0 +1,77 @@
+import requests
+import mysql.connector
+from datetime import datetime as dt
+from time import sleep
+import sys
+
+DB_HOST = 'localhost'
+DB_USER = 'kruppallee'
+DB_DATABASE = 'kruppallee'
+DB_PASSWORD = 'auiasd6fa7h2j23%/bwwer'  # Replace with your actual password
+API_URL = "https://ifa.ruhrbahn.de/departure/20009409" #9409
+
+def store_data(datetime, line, realdatetime=None, delay=None, realtime=None, direction=None):
+    # Connect to MySQL database
+    connection = mysql.connector.connect(host=DB_HOST, user=DB_USER, database=DB_DATABASE, password=DB_PASSWORD)
+    cursor = connection.cursor()
+
+    # Query to insert data into the database
+    insert_query = """
+        REPLACE INTO departures (datetime, line, realdatetime, delay, realtime, direction)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+
+    data_tuple = (datetime, line, realdatetime, delay, realtime, direction)
+    cursor.execute(insert_query, data_tuple)
+    connection.commit()
+    cursor.close()
+    connection.close()
+    print("Data stored successfully.")
+
+def main():
+    response = requests.get(API_URL)
+
+    # Statuscode prüfen
+    if response.status_code == 200:
+        data = response.json()  # Antwort als JSON lesen
+        departure_list = data["data"]["departureList"]
+
+        for departure in departure_list:
+
+            if departure.get("platform") != "1":
+                continue
+
+            datetime = parse_datetime(departure["dateTime"])
+            line = departure["servingLine"].get("symbol")
+            realdatetime = None
+            delay = departure["servingLine"].get("delay")
+            realtime = departure["servingLine"].get("realtime")
+            direction = departure["servingLine"].get("direction")
+
+            if "realDateTime" in departure:
+                realdatetime = parse_datetime(departure["realDateTime"])
+            
+            store_data(datetime, line, realdatetime, delay, realtime, direction)
+    else:
+        print("Fehler:", response.status_code)
+
+def parse_datetime(date_dict):
+    keys = ['year', 'month', 'day', 'hour', 'minute']
+    datetime_dict = {}
+    for key in keys:
+        if key in date_dict:
+            datetime_dict[key] = int(date_dict[key])
+        else:
+            datetime_dict[key] = 0
+    return dt(**datetime_dict)
+
+def loop():
+    while True:
+        main()
+        sleep(300)
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--loop":
+        loop()
+    else:
+        main()

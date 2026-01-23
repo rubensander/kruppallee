@@ -1,0 +1,4 @@
+How to log into raspberry pi via ssh
+
+- Open Powershell as Admin
+- ssh pi@raspberrypi

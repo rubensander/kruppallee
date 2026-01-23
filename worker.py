@@ -7,9 +7,9 @@ import sys
 import logging
 
 DB_HOST = 'localhost'
-DB_USER = 'root'
+DB_USER = 'python'
 DB_DATABASE = 'kruppallee'
-DB_PASSWORD = '0000'  # Replace with your actual password
+DB_PASSWORD = 'h6s73hb378f7wh'  # Replace with your actual password
 API_URL = "https://ifa.ruhrbahn.de/departure/20009409" #9409
 
 def store_data(datetime, line, platform, realdatetime=None, delay=None, realtime=None, direction=None):
@@ -24,7 +24,7 @@ def store_data(datetime, line, platform, realdatetime=None, delay=None, realtime
     """
 
     data_tuple = (datetime, line, realdatetime, delay, realtime, direction, platform)
-    cursor.execute(insert_query, data_tuple)
+    result = cursor.execute(insert_query, data_tuple)
     connection.commit()
     cursor.close()
     connection.close()

@@ -5,11 +5,15 @@ from datetime import datetime as dt
 from time import sleep
 import sys
 import logging
+import os
+from dotenv import load_dotenv
 
-DB_HOST = 'localhost'
-DB_USER = 'python'
-DB_DATABASE = 'kruppallee'
-DB_PASSWORD = 'h6s73hb378f7wh'  # Replace with your actual password
+load_dotenv()
+DB_HOST = os.getenv('DB_HOST')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_DATABASE = os.getenv('DB_DATABASE')
+
 API_URL = "https://ifa.ruhrbahn.de/departure/20009409" #9409
 
 def store_data(datetime, line, platform, realdatetime=None, delay=None, realtime=None, direction=None):

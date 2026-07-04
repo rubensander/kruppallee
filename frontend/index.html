@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Departure Board</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .info-bar {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .last-updated {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-card .unit {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-left: 5px;
+        }
+
+        .stat-card.green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .stat-card.red {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        }
+
+        .stat-card.blue {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.1em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        thead {
+            background: #667eea;
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #667eea;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .delay-stats-table {
+            font-size: 0.95em;
+        }
+
+        .delay-stats-table td {
+            padding: 12px;
+        }
+
+        .delay-high {
+            background: #fee;
+            color: #c33;
+            font-weight: bold;
+        }
+
+        .delay-medium {
+            background: #ffeaa7;
+            color: #d63031;
+            font-weight: bold;
+        }
+
+        .delay-low {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .delay-none {
+            background: #c3e6cb;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .line-badge {
+            background: #764ba2;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            min-width: 50px;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .time {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .delay-positive {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .delay-negative {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .real-time {
+            background: #e7f3ff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #0066cc;
+        }
+
+        .platform {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            th, td {
+                padding: 10px 5px;
+                font-size: 0.9em;
+            }
+
+            .info-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⏰ Abfahrtstafel</h1>
+            <p class="subtitle">Nächste Abfahrten</p>
+        </header>
+
+        <div class="info-bar">
+            <span class="last-updated">Aktualisiert: <span id="lastUpdate">--:--:--</span></span>
+            <button class="refresh-btn" onclick="fetchDepartures()">🔄 Aktualisieren</button>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3>Abfahrten (7 Tage)</h3>
+                <div><span class="value" id="statTotal">0</span></div>
+            </div>
+            <div class="stat-card green">
+                <h3>Pünktlich</h3>
+                <div><span class="value" id="statOntime">0</span><span class="unit">%</span></div>
+            </div>
+            <div class="stat-card red">
+                <h3>Durchschn. Verspätung</h3>
+                <div><span class="value" id="statAvgDelay">0</span><span class="unit">min</span></div>
+            </div>
+            <div class="stat-card blue">
+                <h3>Median Verspätung</h3>
+                <div><span class="value" id="statMedianDelay">0</span><span class="unit">min</span></div>
+            </div>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="noData" class="no-data" style="display: none;">Keine Abfahrten in den nächsten 3 Stunden gefunden.</div>
+
+        <h2 class="section-title">📊 Verspätungsstatistik nach Linie und Uhrzeit (7 Tage)</h2>
+        <table id="delayStatsTable" class="delay-stats-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Linie</th>
+                    <th>04:25-06:25</th>
+                    <th>06:25-09:15</th>
+                    <th>09:15-12:00</th>
+                    <th>12:00-19:00</th>
+                    <th>19:00-23:30</th>
+                    <th>23:30-04:25</th>
+                    <th>Ø Gesamt</th>
+                </tr>
+            </thead>
+            <tbody id="delayStatsBody">
+            </tbody>
+        </table>
+        <div id="delayStatsEmpty" class="no-data" style="display: none; margin-top: 20px;">Keine Verspätungsdaten vorhanden.</div>
+
+        <h2 class="section-title">📋 Nächste Abfahrten</h2>
+
+        <table id="table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Linie</th>
+                    <th>Abfahrtszeit</th>
+                    <th>Echtzeit</th>
+                    <th>Verspätung</th>
+                    <th>Gleis</th>
+                    <th>Richtung</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+
+        <div id="loading" class="loading" style="display: none;">Laden...</div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/departures';
+        // Set to 0 to show all future data, or set to milliseconds for time-based filtering
+        const TIME_WINDOW_MS = 3 * 60 * 60 * 1000; // Next 3 hours
+        const STATS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // Last 7 days for stats
+
+        async function fetchDepartures() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const noData = document.getElementById('noData');
+            const table = document.getElementById('table');
+            const tableBody = document.getElementById('tableBody');
+
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            table.style.display = 'none';
+            noData.style.display = 'none';
+
+            try {
+                const response = await fetch(API_URL + '?limit=1000');
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const now = new Date();
+                
+                // Filter for upcoming departures
+                let filteredData = data.filter(departure => {
+                    const departureTime = new Date(departure.datetime);
+                    return departureTime >= now;
+                });
+
+                // If time window is set, limit to that window
+                if (TIME_WINDOW_MS > 0) {
+                    const timeWindowEnd = new Date(now.getTime() + TIME_WINDOW_MS);
+                    filteredData = filteredData.filter(departure => {
+                        const departureTime = new Date(departure.datetime);
+                        return departureTime <= timeWindowEnd;
+                    });
+                }
+
+                // Sort by datetime ascending (nearest first)
+                filteredData.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+                // Calculate statistics from last 7 days
+                calculateStatistics(data, now);
+                calculateDelayStatistics(data, now);
+
+                loading.style.display = 'none';
+
+                if (filteredData.length === 0) {
+                    noData.style.display = 'block';
+                } else {
+                    tableBody.innerHTML = '';
+                    filteredData.forEach(departure => {
+                        const row = createTableRow(departure);
+                        tableBody.appendChild(row);
+                    });
+                    table.style.display = 'table';
+                }
+
+                updateLastUpdate();
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.textContent = `Fehler beim Laden der Daten: ${err.message}`;
+                console.error(err);
+            }
+        }
+
+        function calculateStatistics(data, now) {
+            const sevenDaysAgo = new Date(now.getTime() - STATS_WINDOW_MS);
+
+            // Filter data from last 7 days
+            const lastSevenDays = data.filter(departure => {
+                const departureTime = new Date(departure.datetime);
+                return departureTime >= sevenDaysAgo && departureTime <= now;
+            });
+
+            if (lastSevenDays.length === 0) {
+                document.getElementById('statTotal').textContent = '0';
+                document.getElementById('statOntime').textContent = '0';
+                document.getElementById('statAvgDelay').textContent = '0';
+                document.getElementById('statMedianDelay').textContent = '0';
+                return;
+            }
+
+            // Total departures
+            const total = lastSevenDays.length;
+            document.getElementById('statTotal').textContent = total;
+
+            // On-time percentage
+            const onTimeCount = lastSevenDays.filter(d => !d.delay || d.delay <= 0).length;
+            const onTimePercentage = Math.round((onTimeCount / total) * 100);
+            document.getElementById('statOntime').textContent = onTimePercentage;
+
+            // Average delay
+            const delayedDepartures = lastSevenDays.filter(d => d.delay !== null && d.delay !== undefined);
+            const avgDelay = delayedDepartures.length > 0 
+                ? Math.round(delayedDepartures.reduce((sum, d) => sum + d.delay, 0) / delayedDepartures.length)
+                : 0;
+            document.getElementById('statAvgDelay').textContent = avgDelay;
+
+            // Median delay
+            const allDelays = lastSevenDays.map(d => d.delay || 0).sort((a, b) => a - b);
+            const medianDelay = allDelays.length > 0 
+                ? allDelays.length % 2 === 0 
+                    ? Math.round((allDelays[allDelays.length / 2 - 1] + allDelays[allDelays.length / 2]) / 2)
+                    : allDelays[Math.floor(allDelays.length / 2)]
+                : 0;
+            document.getElementById('statMedianDelay').textContent = medianDelay;
+        }
+
+        function calculateDelayStatistics(data, now) {
+            const sevenDaysAgo = new Date(now.getTime() - STATS_WINDOW_MS);
+
+            // Filter data from last 7 days
+            const lastSevenDays = data.filter(departure => {
+                const departureTime = new Date(departure.datetime);
+                return departureTime >= sevenDaysAgo && departureTime <= now;
+            });
+
+            if (lastSevenDays.length === 0) {
+                document.getElementById('delayStatsTable').style.display = 'none';
+                document.getElementById('delayStatsEmpty').style.display = 'block';
+                return;
+            }
+
+            // Time buckets (chronological order)
+            const buckets = [
+                { name: '04:25-06:25', start: 4.417, end: 6.417 },   // 04:25 - 06:25
+                { name: '06:25-09:15', start: 6.417, end: 9.25 },    // 06:25 - 09:15
+                { name: '09:15-12:00', start: 9.25, end: 12 },       // 09:15 - 12:00
+                { name: '12:00-19:00', start: 12, end: 19 },         // 12:00 - 19:00
+                { name: '19:00-23:30', start: 19, end: 23.5 },       // 19:00 - 23:30
+                { name: '23:30-04:25', start: 23.5, end: 28.417 }    // 23:30 - 04:25 (next day)
+            ];
+
+            // Group by line and time slot
+            const delayStats = {}; // line -> { slot0..5 -> [delays], total -> [delays] }
+
+            lastSevenDays.forEach(d => {
+                const line = d.line;
+                const departureTime = new Date(d.datetime);
+                const hour = departureTime.getHours() + departureTime.getMinutes() / 60;
+                
+                let slotIndex = -1;
+                for (let i = 0; i < buckets.length; i++) {
+                    const bucket = buckets[i];
+                    if (i === buckets.length - 1) {
+                        // Last bucket wraps around midnight
+                        if (hour >= bucket.start || hour < 4.417) {
+                            slotIndex = i;
+                            break;
+                        }
+                    } else {
+                        if (hour >= bucket.start && hour < bucket.end) {
+                            slotIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                if (slotIndex === -1) slotIndex = 0; // Default fallback
+
+                if (!delayStats[line]) {
+                    delayStats[line] = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], total: [] };
+                }
+
+                const delay = d.delay || 0;
+                delayStats[line][slotIndex].push(delay);
+                delayStats[line].total.push(delay);
+            });
+
+            // Create table rows
+            const tbody = document.getElementById('delayStatsBody');
+            tbody.innerHTML = '';
+
+            Object.keys(delayStats).sort().forEach(line => {
+                const stats = delayStats[line];
+                
+                const avgSlot = buckets.map((_, i) => 
+                    stats[i].length > 0 ? Math.round(stats[i].reduce((a, b) => a + b) / stats[i].length) : '-'
+                );
+                const avgTotal = stats.total.length > 0 ? Math.round(stats.total.reduce((a, b) => a + b) / stats.total.length) : 0;
+
+                const row = document.createElement('tr');
+                const lineStyle = getLineColor(line);
+                const slotCells = avgSlot.map(avg => {
+                    if (avg === '-') {
+                        return `<td>-</td>`;
+                    }
+                    return `<td class="${getDelayClass(avg)}">${avg} min</td>`;
+                }).join('');
+                row.innerHTML = `
+                    <td><span class="line-badge" style="${lineStyle}">${line}</span></td>
+                    ${slotCells}
+                    <td class="${getDelayClass(avgTotal)}"><strong>${avgTotal} min</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('delayStatsTable').style.display = 'table';
+            document.getElementById('delayStatsEmpty').style.display = 'none';
+        }
+
+        function getLineColor(line) {
+            const lineColors = {
+                '107': 'background-color: #cf1518;',
+                '103': 'background-color: #ffcc00; color: #000;',
+                'ne8': 'background-color: #a876b1;'
+            };
+            return lineColors[line] || '';
+        }
+
+        function getDelayClass(delay) {
+            if (delay === 0) return 'delay-none';
+            if (delay <= 2) return 'delay-low';
+            if (delay <= 5) return 'delay-medium';
+            return 'delay-high';
+        }
+
+        function createTableRow(departure) {
+            const row = document.createElement('tr');
+            
+            const departureTime = new Date(departure.datetime);
+            const realTime = departure.realdatetime ? new Date(departure.realdatetime) : null;
+            
+            const timeStr = formatTime(departureTime);
+            const realTimeStr = realTime ? formatTime(realTime) : '—';
+            
+            let delayStr = '—';
+            let delayClass = '';
+            if (departure.delay !== null && departure.delay !== undefined) {
+                delayStr = departure.delay + ' min';
+                delayClass = departure.delay > 0 ? 'delay-negative' : 'delay-positive';
+            }
+
+            const realTimeBadge = realTime ? `<span class="real-time">✓ ${realTimeStr}</span>` : '—';
+            const lineStyle = getLineColor(departure.line);
+
+            row.innerHTML = `
+                <td><span class="line-badge" style="${lineStyle}">${departure.line}</span></td>
+                <td><span class="time">${timeStr}</span></td>
+                <td>${realTimeBadge}</td>
+                <td><span class="${delayClass}">${delayStr}</span></td>
+                <td><span class="platform">${departure.platform}</span></td>
+                <td>${departure.direction || '—'}</td>
+            `;
+
+            return row;
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('de-DE');
+        }
+
+        // Initial load
+        fetchDepartures();
+
+        // Auto-refresh every 30 seconds
+        setInterval(fetchDepartures, 30000);
+    </script>
+</body>
+</html>

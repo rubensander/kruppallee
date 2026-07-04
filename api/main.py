@@ -1,5 +1,5 @@
 """FastAPI application for exposing departure data."""
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 import mysql.connector
@@ -61,24 +61,58 @@ def get_db_connection():
 
 
 @app.get("/departures", response_model=List[Departure])
-async def get_departures(line: Optional[str] = None, limit: int = 100):
+async def get_departures(
+    line: Optional[str] = Query(None, description="Filter by specific line number (e.g., '107', '103')"),
+    limit: int = Query(100, description="Maximum number of results to return (default: 100)"),
+    from_date: Optional[str] = Query(None, description="Filter departures from this date (YYYY-MM-DD format, e.g., '2026-07-01')"),
+    to_date: Optional[str] = Query(None, description="Filter departures up to this date (YYYY-MM-DD format, e.g., '2026-07-04')")
+):
     """
     Get departure data from the database.
     
-    Query parameters:
-    - line: Filter by specific line (optional)
-    - limit: Maximum number of results (default: 100)
+    Returns a list of departures with the following optional filters:
+    
+    - **line**: Filter by specific line (e.g., '107', '103', 'ne8')
+    - **limit**: Maximum number of results (default: 100, max: 1000)
+    - **from_date**: Start date in YYYY-MM-DD format (inclusive)
+    - **to_date**: End date in YYYY-MM-DD format (inclusive)
+    
+    Examples:
+    - `/departures` - Get 100 latest departures
+    - `/departures?limit=50` - Get 50 latest departures
+    - `/departures?line=107` - Get departures for line 107
+    - `/departures?from_date=2026-07-01&to_date=2026-07-04` - Get departures in date range
+    - `/departures?line=107&from_date=2026-07-01&to_date=2026-07-04&limit=500` - Combined filters
     """
     try:
         connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
         
+        # Build WHERE clause conditions
+        conditions = []
+        params = []
+        
         if line:
-            query = "SELECT * FROM departures WHERE line = %s ORDER BY datetime DESC LIMIT %s"
-            cursor.execute(query, (line, limit))
+            conditions.append("line = %s")
+            params.append(line)
+        
+        if from_date:
+            conditions.append("DATE(datetime) >= %s")
+            params.append(from_date)
+        
+        if to_date:
+            conditions.append("DATE(datetime) <= %s")
+            params.append(to_date)
+        
+        # Build query
+        if conditions:
+            where_clause = " WHERE " + " AND ".join(conditions)
         else:
-            query = "SELECT * FROM departures ORDER BY datetime DESC LIMIT %s"
-            cursor.execute(query, (limit,))
+            where_clause = ""
+        
+        params.append(limit)
+        query = f"SELECT * FROM departures{where_clause} ORDER BY datetime DESC LIMIT %s"
+        cursor.execute(query, params)
         
         results = cursor.fetchall()
         cursor.close()

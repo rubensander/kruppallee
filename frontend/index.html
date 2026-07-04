@@ -77,6 +77,50 @@
             background: #5568d3;
         }
 
+        .platform-select {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 0.95em;
+            cursor: pointer;
+            background: white;
+            color: #333;
+            transition: all 0.3s;
+        }
+
+        .platform-select:hover {
+            border-color: #5568d3;
+            background: #f9f9f9;
+        }
+
+        .date-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-inputs input {
+            padding: 10px 12px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 0.95em;
+            cursor: pointer;
+            background: white;
+            color: #333;
+            transition: all 0.3s;
+        }
+
+        .date-inputs input:hover {
+            border-color: #5568d3;
+            background: #f9f9f9;
+        }
+
+        .date-label {
+            color: #666;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -288,12 +332,23 @@
 
         <div class="info-bar">
             <span class="last-updated">Aktualisiert: <span id="lastUpdate">--:--:--</span></span>
-            <button class="refresh-btn" onclick="fetchDepartures()">🔄 Aktualisieren</button>
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div class="date-inputs">
+                    <span class="date-label">Von:</span>
+                    <input type="date" id="dateFrom">
+                    <span class="date-label">Bis:</span>
+                    <input type="date" id="dateTo">
+                </div>
+                <button class="refresh-btn" onclick="refreshWithDateRange();">🔄 Aktualisieren</button>
+                <select class="platform-select" id="platformFilter" onchange="filterByPlatform()">
+                    <option value="">Alle Steige</option>
+                </select>
+            </div>
         </div>
 
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card">
-                <h3>Abfahrten (7 Tage)</h3>
+                <h3>Abfahrten</h3>
                 <div><span class="value" id="statTotal">0</span></div>
             </div>
             <div class="stat-card green">
@@ -313,7 +368,7 @@
         <div id="error" class="error" style="display: none;"></div>
         <div id="noData" class="no-data" style="display: none;">Keine Abfahrten in den nächsten 3 Stunden gefunden.</div>
 
-        <h2 class="section-title">📊 Verspätungsstatistik nach Linie und Uhrzeit (7 Tage)</h2>
+        <h2 class="section-title">📊 Verspätungsstatistik nach Linie und Uhrzeit</h2>
         <table id="delayStatsTable" class="delay-stats-table" style="display: none;">
             <thead>
                 <tr>
@@ -341,7 +396,7 @@
                     <th>Abfahrtszeit</th>
                     <th>Echtzeit</th>
                     <th>Verspätung</th>
-                    <th>Gleis</th>
+                    <th>Steig</th>
                     <th>Richtung</th>
                 </tr>
             </thead>
@@ -353,34 +408,67 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8000/departures';
+        const API_URL = 'http://192.168.178.20:8000/departures';
         // Set to 0 to show all future data, or set to milliseconds for time-based filtering
         const TIME_WINDOW_MS = 3 * 60 * 60 * 1000; // Next 3 hours
         const STATS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // Last 7 days for stats
+        let allDepartures = []; // Store all fetched departures
+        let allDataForStats = []; // Store all data for 7 days (for stats)
+
+        // Initialize date inputs on page load
+        window.addEventListener('load', initializeDateInputs);
+        // Also initialize immediately in case load event already fired
+        initializeDateInputs();
+
+        function initializeDateInputs() {
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            // Format dates as YYYY-MM-DD for input[type="date"]
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            const fromDate = formatDate(sevenDaysAgo);
+            const toDate = formatDate(now);
+            
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            
+            if (dateFromInput) {
+                dateFromInput.value = fromDate;
+            }
+            if (dateToInput) {
+                dateToInput.value = toDate;
+            }
+            
+            console.log('Date inputs initialized:', fromDate, 'to', toDate);
+        }
 
         async function fetchDepartures() {
             const loading = document.getElementById('loading');
             const error = document.getElementById('error');
             const noData = document.getElementById('noData');
-            const table = document.getElementById('table');
-            const tableBody = document.getElementById('tableBody');
 
             loading.style.display = 'block';
             error.style.display = 'none';
-            table.style.display = 'none';
             noData.style.display = 'none';
 
             try {
-                const response = await fetch(API_URL + '?limit=1000');
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
-                }
-
-                const data = await response.json();
                 const now = new Date();
                 
+                // Fetch only next 100 departures (for main table, no date filter)
+                const upcomingResponse = await fetch(`${API_URL}?limit=100`);
+                if (!upcomingResponse.ok) {
+                    throw new Error(`API Error: ${upcomingResponse.status}`);
+                }
+                const upcomingData = await upcomingResponse.json();
+                
                 // Filter for upcoming departures
-                let filteredData = data.filter(departure => {
+                let filteredData = upcomingData.filter(departure => {
                     const departureTime = new Date(departure.datetime);
                     return departureTime >= now;
                 });
@@ -397,28 +485,77 @@
                 // Sort by datetime ascending (nearest first)
                 filteredData.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
 
-                // Calculate statistics from last 7 days
-                calculateStatistics(data, now);
-                calculateDelayStatistics(data, now);
+                // Store all departures for filtering
+                allDepartures = filteredData;
 
                 loading.style.display = 'none';
 
-                if (filteredData.length === 0) {
-                    noData.style.display = 'block';
-                } else {
-                    tableBody.innerHTML = '';
-                    filteredData.forEach(departure => {
-                        const row = createTableRow(departure);
-                        tableBody.appendChild(row);
-                    });
-                    table.style.display = 'table';
-                }
+                // Apply current filter to maintain active steig filter
+                filterByPlatform();
 
                 updateLastUpdate();
             } catch (err) {
                 loading.style.display = 'none';
                 error.style.display = 'block';
                 error.textContent = `Fehler beim Laden der Daten: ${err.message}`;
+                console.error(err);
+            }
+        }
+
+        async function refreshWithDateRange() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+
+            // Ensure date inputs are initialized
+            if (!document.getElementById('dateFrom').value) {
+                initializeDateInputs();
+            }
+
+            loading.style.display = 'block';
+            error.style.display = 'none';
+
+            try {
+                const now = new Date();
+                const fromDateStr = document.getElementById('dateFrom').value;
+                const toDateStr = document.getElementById('dateTo').value;
+                
+                // Build URL with date range for statistics only
+                let statsUrl = `${API_URL}?limit=1000`;
+                if (fromDateStr) {
+                    statsUrl += `&from_date=${encodeURIComponent(fromDateStr)}`;
+                }
+                if (toDateStr) {
+                    statsUrl += `&to_date=${encodeURIComponent(toDateStr)}`;
+                }
+                
+                // Fetch statistics data with date range
+                const statsResponse = await fetch(statsUrl);
+                if (!statsResponse.ok) {
+                    throw new Error(`API Error`);
+                }
+                
+                const statsData = await statsResponse.json();
+                
+                // Store all data from date range for statistics
+                allDataForStats = statsData;
+                
+                // Update platform filter options with statistics data
+                updatePlatformFilter(statsData);
+
+                // Calculate statistics from data
+                calculateStatistics(allDataForStats, now);
+                calculateDelayStatistics(allDataForStats, now);
+
+                loading.style.display = 'none';
+
+                // Apply current filter to statistics only
+                filterByPlatform();
+
+                updateLastUpdate();
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.textContent = `Fehler beim Laden der Statistik: ${err.message}`;
                 console.error(err);
             }
         }
@@ -568,6 +705,98 @@
             return lineColors[line] || '';
         }
 
+        function updatePlatformFilter(departures) {
+            const platformSelect = document.getElementById('platformFilter');
+            const currentValue = platformSelect.value;
+            
+            // Get unique platforms, filter out null/undefined
+            const platforms = [...new Set(
+                departures
+                    .map(d => d.platform)
+                    .filter(p => p !== null && p !== undefined)
+                    .map(p => String(p))
+            )].sort((a, b) => {
+                const numA = parseInt(a);
+                const numB = parseInt(b);
+                return numA - numB;
+            });
+            
+            console.log('Platforms found:', platforms); // Debug log
+            
+            // Keep "Alle Steige" option and add platform options
+            platformSelect.innerHTML = '<option value="">Alle Steige</option>';
+            platforms.forEach(platform => {
+                const option = document.createElement('option');
+                option.value = platform;
+                option.textContent = `Steig ${platform}`;
+                platformSelect.appendChild(option);
+            });
+            
+            // Restore previous selection if it still exists
+            if (platforms.includes(currentValue)) {
+                platformSelect.value = currentValue;
+            } else {
+                platformSelect.value = '';
+            }
+        }
+
+        function filterByPlatform() {
+            const platformSelect = document.getElementById('platformFilter');
+            const selectedPlatform = platformSelect.value;
+            
+            const tableBody = document.getElementById('tableBody');
+            const table = document.getElementById('table');
+            const noData = document.getElementById('noData');
+            
+            let filteredData = allDepartures;
+            
+            // Filter by platform only (no date filter for next departures table)
+            if (selectedPlatform) {
+                filteredData = allDepartures.filter(d => String(d.platform) === selectedPlatform);
+            }
+            
+            if (filteredData.length === 0) {
+                table.style.display = 'none';
+                noData.style.display = 'block';
+            } else {
+                tableBody.innerHTML = '';
+                filteredData.forEach(departure => {
+                    const row = createTableRow(departure);
+                    tableBody.appendChild(row);
+                });
+                table.style.display = 'table';
+                noData.style.display = 'none';
+            }
+
+            updateStatisticsForDateRange();
+        }
+
+        function updateStatisticsForDateRange() {
+            const platformSelect = document.getElementById('platformFilter');
+            const selectedPlatform = platformSelect.value;
+            const dateFrom = new Date(document.getElementById('dateFrom').value);
+            const dateTo = new Date(document.getElementById('dateTo').value);
+            dateTo.setHours(23, 59, 59, 999); // Set end of day
+            
+            let filteredStatsData = allDataForStats;
+            
+            // Filter by platform
+            if (selectedPlatform) {
+                filteredStatsData = allDataForStats.filter(d => String(d.platform) === selectedPlatform);
+            }
+            
+            // Apply date range filter
+            filteredStatsData = filteredStatsData.filter(d => {
+                const departureDate = new Date(d.datetime);
+                return departureDate >= dateFrom && departureDate <= dateTo;
+            });
+            
+            // Update statistics based on filtered data
+            const now = new Date();
+            calculateStatistics(filteredStatsData, now);
+            calculateDelayStatistics(filteredStatsData, now);
+        }
+
         function getDelayClass(delay) {
             if (delay === 0) return 'delay-none';
             if (delay <= 2) return 'delay-low';
@@ -619,9 +848,11 @@
         }
 
         // Initial load
+        initializeDateInputs();
         fetchDepartures();
+        refreshWithDateRange();
 
-        // Auto-refresh every 30 seconds
+        // Auto-refresh only next departures every 30 seconds
         setInterval(fetchDepartures, 30000);
     </script>
 </body>

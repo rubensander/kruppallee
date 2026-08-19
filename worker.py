@@ -36,36 +36,40 @@ def store_data(datetime, line, platform, realdatetime=None, delay=None, realtime
     logging.info(f"Stored data: {data_tuple}")
 
 def main():
-    logging.basicConfig(level=logging.WARN, format='%(asctime)s - %(levelname)s - %(message)s')
-    logging.getLogger().addHandler(logging.FileHandler("log.txt"))
+    # logging.getLogger().addHandler(logging.FileHandler("log.txt"))
+    logging.basicConfig(filename="log.txt", level=logging.WARN, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    response = requests.get(API_URL)
+    
+    try:
+        response = requests.get(API_URL)
 
-    # Statuscode prüfen
-    if response.status_code == 200:
-        data = response.json()  # Antwort als JSON lesen
-        departure_list = data["data"]["departureList"]
+        # Statuscode prüfen
+        if response.status_code == 200:
+            data = response.json()  # Antwort als JSON lesen
+            departure_list = data["data"]["departureList"]
 
-        if not departure_list:
-            logging.warning("No departures found in the response.")
-            return
+            if not departure_list:
+                logging.warning("No departures found in the response.")
+                return
 
-        for departure in departure_list:
+            for departure in departure_list:
 
-            datetime = parse_datetime(departure["dateTime"])
-            line = departure["servingLine"].get("symbol")
-            realdatetime = None
-            delay = departure["servingLine"].get("delay")
-            realtime = departure["servingLine"].get("realtime")
-            direction = departure["servingLine"].get("direction")
-            platform = departure.get("platform")
+                datetime = parse_datetime(departure["dateTime"])
+                line = departure["servingLine"].get("symbol")
+                realdatetime = None
+                delay = departure["servingLine"].get("delay")
+                realtime = departure["servingLine"].get("realtime")
+                direction = departure["servingLine"].get("direction")
+                platform = departure.get("platform")
 
-            if "realDateTime" in departure:
-                realdatetime = parse_datetime(departure["realDateTime"])
-            
-            store_data(datetime, line, platform, realdatetime, delay, realtime, direction)
-    else:
-        logging.error(response.status_code)
+                if "realDateTime" in departure:
+                    realdatetime = parse_datetime(departure["realDateTime"])
+                
+                store_data(datetime, line, platform, realdatetime, delay, realtime, direction)
+        else:
+            logging.error("Received status code " + response.status_code + "from server.")
+    except requests.exceptions.ConnectionError:
+        logging.error("Could not connect to server.")
 
 def parse_datetime(date_dict):
     keys = ['year', 'month', 'day', 'hour', 'minute']

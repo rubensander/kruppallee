@@ -123,7 +123,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
         }
@@ -203,7 +203,6 @@
 
         th {
             padding: 15px;
-            text-align: left;
             font-weight: 600;
             border-bottom: 2px solid #667eea;
         }
@@ -336,6 +335,8 @@
                 <div class="date-inputs">
                     <span class="date-label">Von:</span>
                     <input type="date" id="dateFrom">
+                </div>
+                <div class="date-inputs">
                     <span class="date-label">Bis:</span>
                     <input type="date" id="dateTo">
                 </div>
@@ -369,46 +370,49 @@
         <div id="noData" class="no-data" style="display: none;">Keine Abfahrten in den nächsten 3 Stunden gefunden.</div>
 
         <h2 class="section-title">📊 Verspätungsstatistik nach Linie und Uhrzeit</h2>
-        <table id="delayStatsTable" class="delay-stats-table" style="display: none;">
-            <thead>
-                <tr>
-                    <th>Linie</th>
-                    <th>04:25-06:25</th>
-                    <th>06:25-09:15</th>
-                    <th>09:15-12:00</th>
-                    <th>12:00-19:00</th>
-                    <th>19:00-23:30</th>
-                    <th>23:30-04:25</th>
-                    <th>Ø Gesamt</th>
-                </tr>
-            </thead>
-            <tbody id="delayStatsBody">
-            </tbody>
-        </table>
+        <div style="overflow-x:auto">
+            <table id="delayStatsTable" class="delay-stats-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Linie</th>
+                        <th>04:25-06:25</th>
+                        <th>06:25-09:15</th>
+                        <th>09:15-12:00</th>
+                        <th>12:00-19:00</th>
+                        <th>19:00-23:30</th>
+                        <th>23:30-04:25</th>
+                        <th>Ø Gesamt</th>
+                    </tr>
+                </thead>
+                <tbody id="delayStatsBody">
+                </tbody>
+            </table>
+        </div>
+
         <div id="delayStatsEmpty" class="no-data" style="display: none; margin-top: 20px;">Keine Verspätungsdaten vorhanden.</div>
 
         <h2 class="section-title">📋 Nächste Abfahrten</h2>
-
-        <table id="table" style="display: none;">
-            <thead>
-                <tr>
-                    <th>Linie</th>
-                    <th>Abfahrtszeit</th>
-                    <th>Echtzeit</th>
-                    <th>Verspätung</th>
-                    <th>Steig</th>
-                    <th>Richtung</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-            </tbody>
-        </table>
-
+        <div style="overflow-x:auto">
+            <table id="table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Linie</th>
+                        <th>Abfahrt</th>
+                        <th>Echtzeit</th>
+                        <th>Verspätung</th>
+                        <th>Steig</th>
+                        <th>Richtung</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
         <div id="loading" class="loading" style="display: none;">Laden...</div>
     </div>
 
     <script>
-        const API_URL = 'http://192.168.178.20:8000/departures';
+        const API_URL = 'http://192.168.178.130:8000/departures';
         // Set to 0 to show all future data, or set to milliseconds for time-based filtering
         const TIME_WINDOW_MS = 3 * 60 * 60 * 1000; // Next 3 hours
         const STATS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // Last 7 days for stats
@@ -820,7 +824,7 @@
                 delayClass = departure.delay > 0 ? 'delay-negative' : 'delay-positive';
             }
 
-            const realTimeBadge = realTime ? `<span class="real-time">✓ ${realTimeStr}</span>` : '—';
+            const realTimeBadge = realTime ? `<span class="real-time">${realTimeStr}</span>` : '—';
             const lineStyle = getLineColor(departure.line);
 
             row.innerHTML = `

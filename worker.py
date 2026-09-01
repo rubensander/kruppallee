@@ -64,6 +64,10 @@ def main():
 
                 if "realDateTime" in departure:
                     realdatetime = parse_datetime(departure["realDateTime"])
+
+                if delay is not None and (int(delay) > 60 or int(delay) < 0):
+                    logging.warning(f"Invalid delay value: {delay} for line {line} at {datetime}. Setting realtime to 0.")
+                    realtime = 0
                 
                 store_data(datetime, line, platform, realdatetime, delay, realtime, direction)
         else:

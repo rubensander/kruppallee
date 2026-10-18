@@ -65,7 +65,8 @@ async def get_departures(
     line: Optional[str] = Query(None, description="Filter by specific line number (e.g., '107', '103')"),
     limit: int = Query(100, description="Maximum number of results to return (default: 100)"),
     from_date: Optional[str] = Query(None, description="Filter departures from this date (YYYY-MM-DD format, e.g., '2026-07-01')"),
-    to_date: Optional[str] = Query(None, description="Filter departures up to this date (YYYY-MM-DD format, e.g., '2026-07-04')")
+    to_date: Optional[str] = Query(None, description="Filter departures up to this date (YYYY-MM-DD format, e.g., '2026-07-04')"),
+    realtime: Optional[bool] = Query(None, description="Filter by realtime status (true or false)")
 ):
     """
     Get departure data from the database.
@@ -76,6 +77,7 @@ async def get_departures(
     - **limit**: Maximum number of results (default: 100, max: 1000)
     - **from_date**: Start date in YYYY-MM-DD format (inclusive)
     - **to_date**: End date in YYYY-MM-DD format (inclusive)
+    - **realtime**: Filter by realtime status (true or false)
     
     Examples:
     - `/departures` - Get 100 latest departures
@@ -104,6 +106,10 @@ async def get_departures(
             conditions.append("DATE(datetime) <= %s")
             params.append(to_date)
         
+        if realtime is not None:
+            conditions.append("realtime = %s")
+            params.append(realtime)
+        
         # Build query
         if conditions:
             where_clause = " WHERE " + " AND ".join(conditions)
@@ -112,6 +118,7 @@ async def get_departures(
         
         params.append(limit)
         query = f"SELECT * FROM departures{where_clause} ORDER BY datetime DESC LIMIT %s"
+        print("Executing query:", query)
         cursor.execute(query, params)
         
         results = cursor.fetchall()

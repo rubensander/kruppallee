@@ -531,6 +531,7 @@
                 if (toDateStr) {
                     statsUrl += `&to_date=${encodeURIComponent(toDateStr)}`;
                 }
+                statsUrl += `&realtime=true`; // Only include real-time data for statistics
                 
                 // Fetch statistics data with date range
                 const statsResponse = await fetch(statsUrl);

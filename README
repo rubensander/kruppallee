@@ -1,4 +1,107 @@
-How to log into raspberry pi via ssh
+# Kruppallee Project
 
-- Open Powershell as Admin
-- ssh pi@raspberrypi
+## Worker
+Configure environment variables in `.env` file for the worker.
+```env
+DB_HOST = 'raspberrypi'
+DB_PORT = 3306
+DB_USER = '<username>'
+DB_PASSWORD = '<password>'
+DB_DATABASE = '<kruppallee or kruppallee_dev>'
+```
+
+## Development
+How to run worker a single time for development
+
+```shell
+python ./worker.py
+```
+
+## Production
+How to run worker using cron job
+```shell
+crontab -e
+```
+Add the following line to run the worker every 5 minutes:
+```cron
+*/5 * * * * /home/pi/kruppallee/.venv/bin/python3 /home/pi/kruppallee/worker.py
+```
+
+
+## API
+Configure environment variables in `.env` file for the web server.
+```env
+DB_HOST = 'raspberrypi'
+DB_PORT = 3306
+DB_USER = '<username>'
+DB_PASSWORD = '<password>'
+DB_DATABASE = '<kruppallee or kruppallee_dev>'
+API_PORT = 8000
+```
+
+### Development 
+How to start API
+```shell
+python ./api/main.py
+```
+### Production
+Create a systemd service file for the API (e.g., `/etc/systemd/system/kruppalleeapi.service`) with the following content:
+
+```ini
+[Unit]
+Description=Kruppallee API
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/kruppallee
+ExecStart=/home/pi/kruppallee/.venv/bin/python3 /home/pi/kruppallee/api/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+How to start the API service
+
+```shell
+sudo systemctl start kruppalleeapi.service
+```
+## Frontend
+Configure environment variables in `.env` file for the web server.
+```env
+API_HOST = 'raspberrypi'
+API_PORT = 8000
+FRONTEND_PORT = 8080
+```
+
+### Development
+How to start frontend
+
+```shell
+python ./frontend/app.py
+```
+
+### Production
+Create a systemd service file for the Frontend (e.g., `/etc/systemd/system/kruppallee.service`) with the following content:
+
+```ini
+[Unit]
+Description=Kruppallee Frontend
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/kruppallee
+ExecStart=/home/pi/kruppallee/.venv/bin/python3 /home/pi/kruppallee/frontend/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+How to start the frontend service
+
+```shell
+sudo systemctl start kruppallee.service
+```

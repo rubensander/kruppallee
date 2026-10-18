@@ -412,7 +412,7 @@
     </div>
 
     <script>
-        const API_URL = 'http://192.168.178.130:8000/departures';
+        const API_URL = 'http://{{api_host}}:{{api_port}}/departures';
         // Set to 0 to show all future data, or set to milliseconds for time-based filtering
         const TIME_WINDOW_MS = 3 * 60 * 60 * 1000; // Next 3 hours
         const STATS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // Last 7 days for stats

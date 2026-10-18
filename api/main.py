@@ -22,12 +22,11 @@ app.add_middleware(
 )
 
 # Database configuration
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_DATABASE"),
-}
+DB_HOST = os.getenv("DB_HOST")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_DATABASE = os.getenv("DB_DATABASE")
+API_PORT = int(os.getenv("API_PORT"))
 
 
 class Departure(BaseModel):
@@ -57,7 +56,12 @@ class Departure(BaseModel):
 
 def get_db_connection():
     """Create a new database connection."""
-    return mysql.connector.connect(**DB_CONFIG)
+    return mysql.connector.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_DATABASE
+    )
 
 
 @app.get("/departures", response_model=List[Departure])
@@ -135,4 +139,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=API_PORT)
